@@ -189,7 +189,6 @@ updateStats = (model, newStats, batch) ->
   For incomplete Dailys, deduct experience
 ###
 cron = (model) ->
-  # TODO: still uses user.tasks
   user = model.at '_user'
   today = +new Date
   daysPassed = helpers.daysBetween(user.get('lastCron'), today, user.get('preferences.dayStart'))
@@ -201,42 +200,45 @@ cron = (model) ->
     hpBefore = obj.stats.hp #we'll use this later so we can animate hp loss
     # Tally each task
     todoTally = 0
-    _.each obj.tasks, (taskObj) ->
-      {id, type, completed, repeat} = taskObj
-      if type in ['todo', 'daily']
-        # Deduct experience for missed Daily tasks,
-        # but not for Todos (just increase todo's value)
-        unless completed
-          # for todos & typical dailies, these are equivalent
-          daysFailed = daysPassed
-          # however, for dailys which have repeat dates, need
-          # to calculate how many they've missed according to their own schedule
-          if type=='daily' && repeat
-            daysFailed = 0
-            _.times daysPassed, (n) ->
-              thatDay = moment().subtract('days', n+1)
-              if repeat[helpers.dayMapping[thatDay.day()]]==true
-                daysFailed++
-          score model, id, 'down', daysFailed, batch, true
-        if type == 'daily'
-          if completed #set OHV for completed dailies
-            newValue = taskObj.value + algos.taskDeltaFormula(taskObj.value,'up')
-            batch.set "tasks.#{taskObj.id}.value", newValue
+    _.each ['habit', 'daily', 'todo'], (type) ->
+      _.each obj["#{type}List"], (taskObj, i) ->
+#      batch.set("#{type}List.#{i}.value", 0)
+        taskPath = "#{type}List.#{i}"
+        {id, type, completed, repeat} = taskObj
+        if type in ['todo', 'daily']
+          # Deduct experience for missed Daily tasks,
+          # but not for Todos (just increase todo's value)
+          unless completed
+            # for todos & typical dailies, these are equivalent
+            daysFailed = daysPassed
+            # however, for dailys which have repeat dates, need
+            # to calculate how many they've missed according to their own schedule
+            if type=='daily' && repeat
+              daysFailed = 0
+              _.times daysPassed, (n) ->
+                thatDay = moment().subtract('days', n+1)
+                if repeat[helpers.dayMapping[thatDay.day()]]==true
+                  daysFailed++
+            score model, type, id, 'down', daysFailed, batch, true
+          if type == 'daily'
+            if completed #set OHV for completed dailies
+              newValue = taskObj.value + algos.taskDeltaFormula(taskObj.value,'up')
+              batch.set "#{taskPath}.value", newValue
 
-          taskObj.history ?= []
-          taskObj.history.push { date: +new Date, value: taskObj.value }
-          batch.set "tasks.#{taskObj.id}.history", taskObj.history
-          batch.set "tasks.#{taskObj.id}.completed", false
-        else
-          value = obj.tasks[taskObj.id].value #get updated value
-          absVal = if (completed) then Math.abs(value) else value
-          todoTally += absVal
-      else if type is 'habit' # slowly reset 'onlies' value to 0
-        if taskObj.up==false or taskObj.down==false
-          if Math.abs(taskObj.value) < 0.1
-            batch.set "tasks.#{taskObj.id}.value", 0
+            taskObj.history ?= []
+            taskObj.history.push { date: +new Date, value: taskObj.value }
+            batch.set "#{taskPath}.history", taskObj.history
+            batch.set "#{taskPath}.completed", false
           else
-            batch.set "tasks.#{taskObj.id}.value", taskObj.value / 2
+            value = obj["#{type}List"][i].value #get updated value
+            absVal = if (completed) then Math.abs(value) else value
+            todoTally += absVal
+        else if type is 'habit' # slowly reset 'onlies' value to 0
+          if taskObj.up==false or taskObj.down==false
+            if Math.abs(taskObj.value) < 0.1
+              batch.set "#{taskPath}.value", 0
+            else
+              batch.set "#{taskPath}.value", taskObj.value / 2
 
     # Finished tallying
     obj.history ?= {}; obj.history.todos ?= []; obj.history.exp ?= []
