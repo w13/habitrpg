@@ -86,9 +86,9 @@
     <!-- add new reward -->
     <app:tasks:newTask type="reward" inputValue="{_newReward}" placeHolder="New Reward" />
 
-    {#if _rewardList}        
+    {#if _user.rewardList}
     <ul class='rewards'>
-        {#each _rewardList as :task}<app:tasks:task />{/}
+        {#each _user.rewardList as :task}<app:tasks:task />{/}
     </ul>
     {/}
 

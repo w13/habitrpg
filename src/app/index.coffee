@@ -40,7 +40,6 @@ get '/', (page, model, params, next) ->
     character.updateUser(model)
     items.server(model)
     model.set '_view', _view
-    browser.restoreRefs model
     page.render()
 
 # ========== CONTROLLER FUNCTIONS ==========

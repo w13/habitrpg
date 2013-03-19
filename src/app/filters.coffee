@@ -12,7 +12,6 @@ module.exports.app = (appExports, model) ->
     user.push "tags",
       id: model.id()
       name: model.get("_newTag")
-    , (-> location.reload())
 
   appExports.toggleEditingTags = ->
     model.set '_editingTags', !model.get('_editingTags')
@@ -26,5 +25,5 @@ module.exports.app = (appExports, model) ->
       if tag.id is tagId
         tags.splice(i,1)
         model.del "_user.filters.#{tag.id}"
-    model.set "_user.tags", tags, -> location.reload()
+    model.set "_user.tags", tags
 

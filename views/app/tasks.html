@@ -6,7 +6,7 @@
         <div class="task-column habits">
             <h2 class="task-column_title">Habits</h2>
             <app:tasks:newTask type="habit" inputValue="{_newHabit}" placeHolder="New Habit" />
-            <ul class="habits">{#each _habitList as :task}<app:tasks:task />{/}</ul>
+            <ul class="habits">{#each _user.habitList as :task}<app:tasks:task />{/}</ul>
         </div>
     </div>
 
@@ -15,7 +15,7 @@
         <div class="task-column dailys">
             <h2 class="task-column_title">Daily</h2>
             <app:tasks:newTask type="daily" inputValue="{_newDaily}" placeHolder="New Daily" />
-            <ul class='dailys'>{#each _dailyList as :task}<app:tasks:task />{/}</ul>
+            <ul class='dailys'>{#each _user.dailyList as :task}<app:tasks:task />{/}</ul>
         </div>
     </div>
 
@@ -39,7 +39,7 @@
 
             <!-- list of all the todos -->
             <ul class='todos task-list'>
-                {#each _todoList as :task}<app:tasks:task />{/}
+                {#each _user.todoList as :task}<app:tasks:task />{/}
             </ul>
             
             <button class='task-action-btn tile spacious bright display-context-dependant show-for-completed' x-bind=click:clearCompleted>Clear Completed</button>
@@ -112,7 +112,7 @@
         <p class="task-text">
             {:task.text}
 
-            <!-- There's a very strange bug where live-bound #each here loses model.at reference on _{type}List alter -->
+            <!-- There's a very strange bug where live-bound #each here loses model.at reference on {type}List alter -->
             {{#each _user.tags as :tag}}
                 <span>
                     {#if :task.tags[:tag.id]}
@@ -204,7 +204,7 @@
                     <ul class="dropdown-menu">
                         {{#each _user.tags as :tag}}
                             <li class="{#if :task.tags[:tag.id]}active{/}">
-                                <a data-task-id="{{:task.id}}" data-tag-id="{:tag.id}" x-bind=click:addTag>{:tag.name}</a>
+                                <a data-task-id="{{:task.id}}" data-task-type="{{:task.type}}" data-tag-id="{{:tag.id}}" x-bind=click:addTag>{:tag.name}</a>
                             </li>
                         {{/}}
                     </ul>

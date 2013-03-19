@@ -3,11 +3,6 @@ moment = require 'moment'
 #algos = require './algos'
 
 
-restoreRefs = module.exports.restoreRefs = (model) ->
-  #refLists
-  _.each ['habit', 'daily', 'todo', 'reward'], (type) ->
-    model.refList "_#{type}List", "_user.tasks", "_user.#{type}Ids"
-
 ###
   Loads JavaScript files from (1) public/js/* and (2) external sources
   If a library is available in a CDN, we put it in <Scripts:> (index.html) for better caching. If not, we use
@@ -56,9 +51,9 @@ setupSortable = (model) ->
           to = $("ul.#{type}s").children().index(item)
           # Use the Derby ignore option to suppress the normal move event
           # binding, since jQuery UI will move the element in the DOM.
-          # Also, note that refList index arguments can either be an index
-          # or the item's id property
-          model.at("_#{type}List").pass(ignore: domId).move {id}, to
+          list = model.get("_user.#{type}List")
+          from = _.indexOf list, _.findWhere(list, {id: id})
+          model.at("_user.#{type}List").pass(ignore: domId).move from, to
 
 setupTooltips = (model) ->
   $('[rel=tooltip]').tooltip()
@@ -188,7 +183,6 @@ module.exports.app = (appExports, model, app) ->
   setupGrowlNotifications(model) unless model.get('_view.mobileDevice')
 
   app.on 'render', (ctx) ->
-    #restoreRefs(model)
     setupSortable(model)
     setupTooltips(model)
     setupTour(model)
