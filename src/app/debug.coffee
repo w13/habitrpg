@@ -6,13 +6,13 @@ module.exports.app = (appExports, model) ->
 
   appExports.emulateNextDay = ->
     yesterday = +moment().subtract('days', 1).toDate()
-    user.set 'lastCron', yesterday
-    window.location.reload()
+    user.set 'lastCron', yesterday, ->
+      window.location.reload()
 
   appExports.emulateTenDays = ->
     yesterday = +moment().subtract('days', 10).toDate()
-    user.set 'lastCron', yesterday
-    window.location.reload()
+    user.set 'lastCron', yesterday, ->
+      window.location.reload()
 
   appExports.cheat = ->
     user.incr 'stats.exp', algos.tnl(user.get('stats.lvl'))
