@@ -94,6 +94,7 @@ module.exports.app = (appExports, model) ->
     task.remove()
 
   appExports.clearCompleted = (e, el) ->
+    # TODO: this is broken
     todos = model.get('_user.todoList')
     removed = false
     _.each model.get('_user.todoList'), (task) ->
@@ -110,11 +111,13 @@ module.exports.app = (appExports, model) ->
     else
       task.set('repeat.' + $(el).attr('data-day'), true)
 
-  appExports.toggleTaskEdit = (e, el) ->
-    hideId = $(el).attr('data-hide-id')
-    toggleId = $(el).attr('data-toggle-id')
-    $(document.getElementById(hideId)).addClass('visuallyhidden')
-    $(document.getElementById(toggleId)).toggleClass('visuallyhidden')
+  appExports.toggleTaskState = (e, el) ->
+    task = model.at(e.target)
+    currentState = task.get('_state')
+    nextState = $(el).attr('data-task-state')
+    if currentState == nextState
+      nextState = 'default'
+    task.set('_state', nextState)
 
   appExports.toggleChart = (e, el) ->
     hideSelector = $(el).attr('data-hide-id')

@@ -71,13 +71,13 @@
         <!-- right-hand side control buttons -->
         <div class="task-meta-controls">
             <!-- edit -->
-            <a x-bind=click:toggleTaskEdit data-hide-id="{{:task.id}}-chart" data-toggle-id="{{:task.id}}-edit" rel=tooltip title="Edit"><i class="icon-pencil"></i></a>
+            <a x-bind=click:toggleTaskState data-task-state="editing" rel=tooltip title="Edit"><i class="icon-pencil"></i></a>
             <!-- delete -->
             <a x-bind=click:del rel=tooltip title="Delete"><i class="icon-trash"></i></a>
             <!-- chart -->
-            <!-- removing for now cuz it's broken -->
+            <!-- removing for now cuz it's broken: when adding this back, make sure to use the _state flag on the task (see toggleTaskState) -->
             {#if :task.history}
-            <!-- <a x-bind=click:toggleChart data-toggle-id="{{:task.id}}-chart" data-hide-id="{{:task.id}}-edit" data-history-path="_user.tasks.{{:task.id}}.history" rel="tooltip" title="Progress"><i class="icon-signal"></i></a> -->
+            <!-- <a x-bind=click:toggleChart data-history-path="_user.tasks.{{:task.id}}.history" rel="tooltip" title="Progress"><i class="icon-signal"></i></a> -->
             {/}
             <!-- notes -->
             {#if :task.notes}
@@ -128,8 +128,8 @@
 
 <!-- task edit/options -->
 <taskMeta:>
-    <div id="{{:task.id}}-edit" class="task-options visuallyhidden">
-        <form x-bind=submit:toggleTaskEdit data-toggle-id="{{:task.id}}-edit">
+    <div class="task-options {#if not(equal(:task._state, 'editing'))}visuallyhidden{/}">
+        <form x-bind=submit:toggleTaskState data-task-state="editing">
             <!-- text & notes -->
             <fieldset class="option-group">
                 <label class="option-title">Text</label><input class="option-content" type=text value={:task.text}>
