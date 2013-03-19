@@ -54,7 +54,6 @@ module.exports.app = (appExports, model) ->
     batch = new character.BatchUpdate(model)
     batch.startTransaction()
     taskTypes = ['habit', 'daily', 'todo', 'reward']
-    batch.set 'tasks', {}
     _.each taskTypes, (type) -> batch.set "#{type}List", []
     batch.set 'balance', 1 if user.get('balance') < 1 #only if they haven't manually bought tokens
     revive(batch)
@@ -173,16 +172,7 @@ module.exports.newUserObject = ->
 
 module.exports.updateUser = (model) ->
   batch = new BatchUpdate(model)
-  user = batch.user
   obj = batch.obj()
-  tasks = obj.tasks
-
-  # Remove corrupted tasks
-  _.each tasks, (task, key) ->
-    unless task?
-      user.del("tasks.#{key}")
-      delete tasks[key]
-
   batch.startTransaction()
   batch.set('apiToken', derby.uuid()) unless obj.apiToken
   batch.commit()

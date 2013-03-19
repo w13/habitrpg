@@ -36,7 +36,8 @@ module.exports.app = (appExports, model) ->
     batch = new character.BatchUpdate(model)
     obj = model.get('_user')
     batch.set 'balance', obj.balance-1
-    _.each obj.tasks, (task) -> batch.set("tasks.#{task.id}.value", 0) unless task.type == 'reward'
+    _.each ['habit', 'daily', 'todo'], (type) ->
+      _.each obj["#{type}List"], (task, i) -> batch.set("#{type}List.#{i}.value", 0)
     batch.commit()
 
 module.exports.routes = (expressApp) ->

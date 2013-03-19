@@ -9,11 +9,12 @@ algos = require './algos'
 
 MODIFIER = algos.MODIFIER # each new level, armor, weapon add 2% modifier (this mechanism will change)
 
+# {taskType} task type (to access the correct list)
 # {taskId} task you want to score
 # {direction} 'up' or 'down'
 # {times} # times to call score on this task (1 unless cron, usually)
 # {update} if we're running updates en-mass (eg, cron on server) pass in userObj
-score = (model, taskId, direction, times, batch, cron) ->
+score = (model, taskType, taskId, direction, times, batch, cron) ->
   user = model.at '_user'
 
   commit = false
@@ -25,8 +26,10 @@ score = (model, taskId, direction, times, batch, cron) ->
 
   {gp, hp, exp, lvl} = obj.stats
 
-  taskPath = "tasks.#{taskId}"
-  taskObj = obj.tasks[taskId]
+  list = obj["#{taskType}List"]
+  taskObj = _.findWhere(list, {id: taskId})
+  index = _.indexOf list, taskObj
+  taskPath = "#{taskType}List.#{index}"
   {type, value} = taskObj
   priority = taskObj.priority or '!'
 
@@ -186,6 +189,7 @@ updateStats = (model, newStats, batch) ->
   For incomplete Dailys, deduct experience
 ###
 cron = (model) ->
+  # TODO: still uses user.tasks
   user = model.at '_user'
   today = +new Date
   daysPassed = helpers.daysBetween(user.get('lastCron'), today, user.get('preferences.dayStart'))

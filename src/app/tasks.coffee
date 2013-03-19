@@ -73,6 +73,7 @@ module.exports.app = (appExports, model) ->
     # Derby extends model.at to support creation from DOM nodes
     task = e.at()
     id = task.get('id')
+    taskType = task.get('type')
 
     history = task.get('history')
     if history and history.length>2
@@ -83,7 +84,7 @@ module.exports.app = (appExports, model) ->
           return # Cancel. Don't delete, don't hurt user
         else
           task.set('type','habit') # hack to make sure it hits HP, instead of performing "undo checkbox"
-          scoring.score(model, id, direction:'down')
+          scoring.score(model, taskType, id, direction:'down')
 
         # prevent accidently deleting long-standing tasks
       else
@@ -185,29 +186,29 @@ module.exports.app = (appExports, model) ->
     Call scoring functions for habits & rewards (todos & dailies handled below)
   ###
   appExports.score = (e, el) ->
-    task= model.at $(el).parents('li')[0]
+    task = model.at $(el).parents('li')[0]
     taskObj = task.get()
     direction = $(el).attr('data-direction')
 
     # set previous state for undo
     setUndo _.clone(user.get('stats')), _.clone(taskObj)
 
-    scoring.score(model, taskObj.id, direction)
+    scoring.score(model, taskObj.type, taskObj.id, direction)
 
   ###
     This is how we handle appExports.score for todos & dailies. Due to Derby's special handling of `checked={:task.completd}`,
     the above function doesn't work so we need a listener here
   ###
-  user.on 'set', 'tasks.*.completed', (i, completed, previous, isLocal, passed) ->
+  user.on 'set', '(todo|daily)List.*.completed', (type, index, completed, previous, isLocal, passed) ->
     return if passed? && passed.cron # Don't do this stuff on cron
     direction = if completed then 'up' else 'down'
 
     # set previous state for undo
-    taskObj = _.clone user.get("tasks.#{i}")
+    taskObj = _.clone user.get("#{type}List.#{index}")
     taskObj.completed = previous
     setUndo _.clone(user.get('stats')), taskObj
 
-    scoring.score(model, i, direction)
+    scoring.score(model, type, taskObj.id, direction)
 
   ###
     Undo
@@ -219,10 +220,13 @@ module.exports.app = (appExports, model) ->
     batch.startTransaction()
     model.del '_undo'
     _.each undo.stats, (val, key) -> batch.set "stats.#{key}", val
-    taskPath = "tasks.#{undo.task.id}"
+    list = model.get "_user.#{undo.task.type}List"
+    index = _.indexOf list, _.findWhere(list, {id: undo.task.id})
+    taskPath = "#{undo.task.type}List.#{index}"
     _.each undo.task, (val, key) ->
       return if key in ['id', 'type'] # strange bugs in this world: https://workflowy.com/shared/a53582ea-43d6-bcce-c719-e134f9bf71fd/
       if key is 'completed'
+        # TODO: This doesn't work since the change to no refLists, completed doesn't update
         user.pass({cron:true}).set("#{taskPath}.completed",val)
       else
         batch.set "#{taskPath}.#{key}", val
