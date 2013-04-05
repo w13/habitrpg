@@ -30,7 +30,7 @@ if (process.env.NODE_ENV === 'development') {
     agent = require('webkit-devtools-agent');
     console.log("To debug memory leaks:" +
         "\n\t(1) Run `kill -SIGUSR2 " + process.pid + "`" +
-        "\n\t(2) open http://c4milo.github.com/node-webkit-agent/21.0.1180.57/inspector.html?host=localhost:1337&page=0");
+        "\n\t(2) open http://c4milo.github.com/node-webkit-agent/21.0.1180.57/inspector.html?host=localhost:9999&page=0");
 }
 
 process.on('uncaughtException', function (error) {
