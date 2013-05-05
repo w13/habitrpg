@@ -1,6 +1,10 @@
 moment = require 'moment'
 _ = require 'underscore'
 algos = require './algos'
+lodash = require 'lodash'
+
+indexById = (arr, id) ->
+  lodash.findIndex arr, ( (obj) -> obj.id is id )
 
 # Absolute diff between two dates
 daysBetween = (yesterday, now, dayStart) ->
@@ -162,4 +166,4 @@ viewHelpers = (view) ->
     return false unless messages?.length > 0
     messages && messages[0].id != lastMessageSeen
 
-module.exports = { viewHelpers, removeWhitespace, randomVal, daysBetween, dayMapping, username }
+module.exports = { viewHelpers, removeWhitespace, randomVal, daysBetween, dayMapping, username, indexById }

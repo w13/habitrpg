@@ -6,6 +6,7 @@ character = require './character'
 items = require './items'
 { pets, hatchingPotions } = items.items
 algos = require './algos'
+h = require './helpers'
 
 MODIFIER = algos.MODIFIER # each new level, armor, weapon add 2% modifier (this mechanism will change)
 
@@ -79,7 +80,7 @@ randomDrop = (model, delta, priority, streak=0) ->
 # {direction} 'up' or 'down'
 # {times} # times to call score on this task (1 unless cron, usually)
 # {update} if we're running updates en-mass (eg, cron on server) pass in userObj
-score = (model, taskId, direction, times, batch, cron) ->
+score = (model, task, direction, times, batch, cron) ->
   user = model.at '_user'
 
   commit = false
@@ -91,8 +92,9 @@ score = (model, taskId, direction, times, batch, cron) ->
 
   {gp, hp, exp, lvl} = obj.stats
 
-  taskPath = "tasks.#{taskId}"
-  taskObj = obj.tasks[taskId]
+  index = h.indexById(obj["#{task.type}s"], task.id)
+  taskPath = "{#task.type}s.#{index}"
+  taskObj = obj["#{task.type}s"][index]
   {type, value, streak} = taskObj
   priority = taskObj.priority or '!'
 
@@ -282,7 +284,7 @@ cron = (model) ->
     batch.set 'lastCron', today
 
     if user.get('flags.rest') is true
-      _.each model.get('_dailyList'), (daily) -> batch.set("tasks.#{daily.id}.completed", false)
+      _.each user.get('dailys'), (daily, i) -> batch.set("dailys.#{i}.completed", false)
       browser.resetDom(model)
       batch.commit()
       return
@@ -290,8 +292,9 @@ cron = (model) ->
     hpBefore = obj.stats.hp #we'll use this later so we can animate hp loss
     # Tally each task
     todoTally = 0
-    _.each obj.tasks, (taskObj) ->
+    _.each _.union(obj.habits, obj.dailys, obj.todos, obj.rewards), (taskObj) ->
       {id, type, completed, repeat} = taskObj
+      index = h.indexById(obj["#{type}s"], taskObj.id)
       if type in ['todo', 'daily']
         # Deduct experience for missed Daily tasks,
         # but not for Todos (just increase todo's value)
@@ -310,22 +313,22 @@ cron = (model) ->
         if type == 'daily'
           if completed #set OHV for completed dailies
             newValue = taskObj.value + algos.taskDeltaFormula(taskObj.value,'up')
-            batch.set "tasks.#{taskObj.id}.value", newValue
+            batch.set "dailys.#{index}.value", newValue
 
           taskObj.history ?= []
           taskObj.history.push { date: +new Date, value: taskObj.value }
-          batch.set "tasks.#{taskObj.id}.history", taskObj.history
-          batch.set "tasks.#{taskObj.id}.completed", false
+          batch.set "dailys.#{index}.history", taskObj.history
+          batch.set "dailys.#{index}.completed", false
         else
-          value = obj.tasks[taskObj.id].value #get updated value
+          value = obj["#{type}s"][index].value #get updated value
           absVal = if (completed) then Math.abs(value) else value
           todoTally += absVal
       else if type is 'habit' # slowly reset 'onlies' value to 0
         if taskObj.up==false or taskObj.down==false
           if Math.abs(taskObj.value) < 0.1
-            batch.set "tasks.#{taskObj.id}.value", 0
+            batch.set "#{type}s.#{index}.value", 0
           else
-            batch.set "tasks.#{taskObj.id}.value", taskObj.value / 2
+            batch.set "#{type}s.#{index}.value", taskObj.value / 2
 
     # Finished tallying
     obj.history ?= {}; obj.history.todos ?= []; obj.history.exp ?= []

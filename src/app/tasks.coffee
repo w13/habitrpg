@@ -1,5 +1,5 @@
 scoring = require './scoring'
-helpers = require './helpers'
+h = require './helpers'
 _ = require 'underscore'
 moment = require 'moment'
 character = require './character'
@@ -7,63 +7,50 @@ character = require './character'
 module.exports.app = (appExports, model) ->
   user = model.at('_user')
 
-  appExports.addTask = (e, el, next) ->
+  appExports.addTask = (e, el) ->
     type = $(el).attr('data-task-type')
-    list = model.at "_#{type}List"
     newModel = model.at('_new' + type.charAt(0).toUpperCase() + type.slice(1))
     text = newModel.get()
     # Don't add a blank task; 20/02/13 Added a check for undefined value, more at issue #463 -lancemanfv
-    if /^(\s)*$/.test(text) || text == undefined
-      console.error "Task text entered was an empty string."
-      return
+    return if /^(\s)*$/.test(text) || text == undefined
 
-    newModel.set ''
+    newTask = {id: model.id(), type: type, text: text, notes: '', value: 0}
     switch type
-
       when 'habit'
-        list.unshift {type: type, text: text, notes: '', value: 0, up: true, down: true}
-
+        newTask = _.defaults {up: true, down: true}, newTask
       when 'reward'
-        list.unshift {type: type, text: text, notes: '', value: 20 }
-
+        newTask = _.defaults {value: 20 }, newTask
       when 'daily'
-        list.unshift {type: type, text: text, notes: '', value: 0, repeat:{su:true,m:true,t:true,w:true,th:true,f:true,s:true}, completed: false }
-
+        newTask = _.defaults {repeat:{su:true,m:true,t:true,w:true,th:true,f:true,s:true}, completed: false }, newTask
       when 'todo'
-        list.unshift {type: type, text: text, notes: '', value: 0, completed: false }
+        newTask = _.defaults {completed: false }, newTask
+    model.unshift "_user.#{type}s", newTask
+    newModel.set ''
 
-  # list.on 'set', '*.completed', (i, completed, previous, isLocal) ->
-  # # Move the item to the bottom if it was checked off
-  # list.move i, -1  if completed && isLocal
 
   appExports.del = (e, el) ->
     # Derby extends model.at to support creation from DOM nodes
-    task = e.at()
-    id = task.get('id')
+    task = e.get()
 
-    history = task.get('history')
+    history = task.history
     if history and history.length>2
       # prevent delete-and-recreate hack on red tasks
-      if task.get('value') < 0
+      if task.value < 0
         result = confirm("Are you sure? Deleting this task will hurt you (to prevent deleting, then re-creating red tasks).")
         if result != true
           return # Cancel. Don't delete, don't hurt user
         else
           task.set('type','habit') # hack to make sure it hits HP, instead of performing "undo checkbox"
-          scoring.score(model, id, direction:'down')
+          scoring.score(model, task, direction:'down')
 
         # prevent accidently deleting long-standing tasks
       else
         result = confirm("Are you sure you want to delete this task?")
         return if result != true
 
-    #TODO bug where I have to delete from _users.tasks AND _{type}List,
-    # fix when query subscriptions implemented properly
     $('[rel=tooltip]').tooltip('hide')
 
-    user.del('tasks.'+id)
-    task.remove()
-
+    e.at().del()
 
   appExports.clearCompleted = (e, el) ->
     completedIds =  _.pluck( _.where(model.get('_todoList'), {completed:true}), 'id')
@@ -149,22 +136,26 @@ module.exports.app = (appExports, model) ->
     # set previous state for undo
     setUndo _.clone(user.get('stats')), _.clone(taskObj)
 
-    scoring.score(model, taskObj.id, direction)
+    scoring.score(model, taskObj, direction)
 
   ###
     This is how we handle appExports.score for todos & dailies. Due to Derby's special handling of `checked={:task.completd}`,
     the above function doesn't work so we need a listener here
   ###
-  user.on 'set', 'tasks.*.completed', (i, completed, previous, isLocal, passed) ->
+  completedCallback = (i, completed, previous, isLocal, passed, type) ->
     return if passed? && passed.cron # Don't do this stuff on cron
     direction = if completed then 'up' else 'down'
 
     # set previous state for undo
-    taskObj = _.clone user.get("tasks.#{i}")
+    taskObj = _.clone user.get("#{type}s")[i]
     taskObj.completed = previous
     setUndo _.clone(user.get('stats')), taskObj
+    scoring.score(model, taskObj, direction)
 
-    scoring.score(model, i, direction)
+  user.on 'set', 'dailys.*.completed', (i, completed, previous, isLocal, passed) ->
+    completedCallback(i, completed, previous, isLocal, passed, 'daily')
+  user.on 'set', 'todos.*.completed', (i, completed, previous, isLocal, passed) ->
+    completedCallback(i, completed, previous, isLocal, passed, 'todo')
 
   ###
     Undo
@@ -195,5 +186,4 @@ module.exports.app = (appExports, model) ->
 
   appExports.tasksSetPriority = (e, el) ->
     dataId = $(el).parent('[data-id]').attr('data-id')
-    #"_user.tasks.#{dataId}"
     model.at(e.target).set 'priority', $(el).attr('data-priority')

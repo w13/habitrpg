@@ -36,8 +36,7 @@ module.exports.app = (appExports, model) ->
     batch = new BatchUpdate(model)
     batch.startTransaction()
     taskTypes = ['habit', 'daily', 'todo', 'reward']
-    batch.set 'tasks', {}
-    _.each taskTypes, (type) -> batch.set "#{type}Ids", []
+    _.each taskTypes, (type) -> batch.set "#{type}s", []
     batch.set 'balance', 1 if user.get('balance') < 1 #only if they haven't manually bought tokens
     revive(batch)
     batch.commit()
@@ -78,14 +77,13 @@ userSchema =
   party: { current: null, invitation: null }
   items: { weapon: 0, armor: 0, head: 0, shield: 0 }
   preferences: { gender: 'm', skin: 'white', hair: 'blond', armorSet: 'v1', dayStart:0, showHelm: true }
-  habitIds: []
-  dailyIds: []
-  todoIds: []
-  rewardIds: []
+  habits: []
+  dailys: []
+  todos: []
+  rewards: []
   apiToken: null # set in newUserObject below
   lastCron: 'new' #this will be replaced with `+new Date` on first run
   balance: 0
-  tasks: {}
   flags:
     partyEnabled: false
     itemsEnabled: false
@@ -97,29 +95,31 @@ module.exports.newUserObject = ->
   newUser.apiToken = derby.uuid()
 
   repeat = {m:true,t:true,w:true,th:true,f:true,s:true,su:true}
-  defaultTasks = [
-    {type: 'habit', text: '1h Productive Work', notes: '-- Habits: Constantly Track --\nFor some habits, it only makes sense to *gain* points (like this one).', value: 0, up: true, down: false }
-    {type: 'habit', text: 'Eat Junk Food', notes: 'For others, it only makes sense to *lose* points', value: 0, up: false, down: true}
-    {type: 'habit', text: 'Take The Stairs', notes: 'For the rest, both + and - make sense (stairs = gain, elevator = lose)', value: 0, up: true, down: true}
+  defaultTasks =
+    habit: [
+      {text: '1h Productive Work', notes: '-- Habits: Constantly Track --\nFor some habits, it only makes sense to *gain* points (like this one).', value: 0, up: true, down: false }
+      {text: 'Eat Junk Food', notes: 'For others, it only makes sense to *lose* points', value: 0, up: false, down: true}
+      {text: 'Take The Stairs', notes: 'For the rest, both + and - make sense (stairs = gain, elevator = lose)', value: 0, up: true, down: true}
+    ]
+    daily: [
+      {text: '1h Personal Project', notes: '-- Dailies: Complete Once a Day --\nAt the end of each day, non-completed Dailies dock you points.', value: 0, completed: false, repeat: repeat }
+      {text: 'Exercise', notes: "If you are doing well, they turn green and are less valuable (experience, gold) and less damaging (HP). This means you can ease up on them for a bit.", value: 3, completed: false, repeat: repeat }
+      {text: '45m Reading', notes: 'But if you are doing poorly, they turn red. The worse you do, the more valuable (exp, gold) and more damaging (HP) these goals become. This encourages you to focus on your shortcomings, the reds.', value: -10, completed: false, repeat: repeat }
+    ]
+    todo: [
+      {text: 'Call Mom', notes: "-- Todos: Complete Eventually --\nNon-completed Todos won't hurt you, but they will become more valuable over time. This will encourage you to wrap up stale Todos.", value: -3, completed: false }
+    ]
+    reward: [
+      {text: '1 Episode of Game of Thrones', notes: '-- Rewards: Treat Yourself! --\nAs you complete goals, you earn gold to buy rewards. Buy them liberally - rewards are integral in forming good habits.', value: 20 }
+      {text: 'Cake', notes: 'But only buy if you have enough gold - you lose HP otherwise.', value: 10 }
+    ]
 
-    {type: 'daily', text: '1h Personal Project', notes: '-- Dailies: Complete Once a Day --\nAt the end of each day, non-completed Dailies dock you points.', value: 0, completed: false, repeat: repeat }
-    {type: 'daily', text: 'Exercise', notes: "If you are doing well, they turn green and are less valuable (experience, gold) and less damaging (HP). This means you can ease up on them for a bit.", value: 3, completed: false, repeat: repeat }
-    {type: 'daily', text: '45m Reading', notes: 'But if you are doing poorly, they turn red. The worse you do, the more valuable (exp, gold) and more damaging (HP) these goals become. This encourages you to focus on your shortcomings, the reds.', value: -10, completed: false, repeat: repeat }
+  _.each defaultTasks, (arr, type) ->
+    _.each arr, (task) ->
+      task.id = derby.uuid()
+      task.type = type
+      newUser["#{type}s"].push task
 
-    {type: 'todo', text: 'Call Mom', notes: "-- Todos: Complete Eventually --\nNon-completed Todos won't hurt you, but they will become more valuable over time. This will encourage you to wrap up stale Todos.", value: -3, completed: false }
-
-    {type: 'reward', text: '1 Episode of Game of Thrones', notes: '-- Rewards: Treat Yourself! --\nAs you complete goals, you earn gold to buy rewards. Buy them liberally - rewards are integral in forming good habits.', value: 20 }
-    {type: 'reward', text: 'Cake', notes: 'But only buy if you have enough gold - you lose HP otherwise.', value: 10 }
-  ]
-
-  for task in defaultTasks
-    guid = task.id = derby.uuid()
-    newUser.tasks[guid] = task
-    switch task.type
-      when 'habit' then newUser.habitIds.push guid
-      when 'daily' then newUser.dailyIds.push guid
-      when 'todo' then newUser.todoIds.push guid
-      when 'reward' then newUser.rewardIds.push guid
   return newUser
 
 module.exports.BatchUpdate = BatchUpdate = (model) ->

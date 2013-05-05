@@ -80,7 +80,7 @@ module.exports.app = (appExports, model) ->
       user.set 'achievements.ultimateGear', true, (-> model._dontPersist = dontPersist)
       $('#max-gear-achievement-modal').modal('show')
 
-  user.on 'set', 'tasks.*.streak', (id, after, before) ->
+  user.on 'set', 'dailys.*.streak', (id, after, before) ->
     if after > 0
 
       # 21-day streak, as per the old philosophy of doign a thing 21-days in a row makes a habit

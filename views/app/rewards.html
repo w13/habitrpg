@@ -30,8 +30,8 @@
             <app:tasks:newTask type="reward" inputValue="{_newReward}" placeHolder="New Reward" />
 
             <!-- Custom Rewards -->
-            <ul class='rewards' style="{#unless _rewardList}display:none{/}">
-                {#each _rewardList as :task}<app:tasks:task />{/}
+            <ul class='rewards' style="{#unless _user.rewards}display:none{/}">
+                {#each _user.rewards as :task}<app:tasks:task />{/}
             </ul>
 
             <!-- Static Rewards -->

@@ -15,51 +15,12 @@ i18n.localize app,
   availableLocales: ['en', 'he', 'bg']
   defaultLocale: 'en'
 
-helpers = require './helpers'
-helpers.viewHelpers view
+h = require './helpers'
+h.viewHelpers view
 
 _ = require('underscore')
 
 # ========== ROUTES ==========
-
-###
-  Cleanup task-corruption (null tasks, rogue/invisible tasks, etc)
-  Obviously none of this should be happening, but we'll stop-gap until we can find & fix
-  Gotta love refLists! see https://github.com/lefnire/habitrpg/issues/803 & https://github.com/lefnire/habitrpg/issues/6343
-###
-cleanupCorruptTasks = (model) ->
-  user = model.at('_user')
-  tasks = user.get('tasks')
-
-  ## Remove corrupted tasks
-  _.each tasks, (task, key) ->
-    unless task?.id? and task?.type?
-      user.del("tasks.#{key}")
-      delete tasks[key]
-
-  batch = null
-
-  ## Task List Cleanup
-  _.each ['habit','daily','todo','reward'], (type) ->
-
-    # 1. remove duplicates
-    # 2. restore missing zombie tasks back into list
-    idList = user.get("#{type}Ids")
-    taskIds =  _.pluck( _.where(tasks, {type:type}), 'id')
-    union = _.union idList, taskIds
-
-    # 2. remove empty (grey) tasks
-    preened = _.filter union, (id) -> id and _.contains(taskIds, id)
-
-    # There were indeed issues found, set the new list
-    if !_.isEqual(idList, preened)
-      unless batch?
-        batch = new require('./character').BatchUpdate(model)
-        batch.startTransaction()
-      batch.set("#{type}Ids", preened)
-      console.error user.get('id') + "'s #{type}s were corrupt."
-
-  batch.commit() if batch?
 
 get '/', (page, model, params, next) ->
   return page.redirect '/' if page.params?.query?.play?
@@ -69,13 +30,7 @@ get '/', (page, model, params, next) ->
   require('./party').partySubscribe page, model, params, next, ->
     model.setNull '_user.apiToken', derby.uuid()
 
-    cleanupCorruptTasks(model) # https://github.com/lefnire/habitrpg/issues/634
-
     require('./items').server(model)
-
-    #refLists
-    _.each ['habit', 'daily', 'todo', 'reward'], (type) ->
-      model.refList "_#{type}List", "_user.tasks", "_user.#{type}Ids"
 
     page.render()
 
@@ -83,6 +38,11 @@ get '/', (page, model, params, next) ->
 
 ready (model) ->
   user = model.at('_user')
+
+  ## Remove corrupted tasks
+  _.each ['habits','dailys','todos','rewards'], (type) ->
+    _.each user.get(type), (task, i) ->
+      user.del("#{type}.#{i}") unless task?.id?
 
   #set cron immediately
   lastCron = user.get('lastCron')

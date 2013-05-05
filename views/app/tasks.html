@@ -27,7 +27,7 @@
             <h2 class="task-column_title">Habits</h2>
             <app:tasks:newTask type="habit" inputValue="{_newHabit}" placeHolder="New Habit" />
             <ul class="habits">
-                {#each _habitList as :task}<app:tasks:task />{/}
+                {#each _user.habits as :task}<app:tasks:task />{/}
             </ul>
             <br/>
             <app:tasks:ads>
@@ -42,7 +42,7 @@
             <h2 class="task-column_title">Dailies</h2>
             <app:tasks:newTask type="daily" inputValue="{_newDaily}" placeHolder="New Daily" />
             <ul class='dailys'>
-                {#each _dailyList as :task}<app:tasks:task />{/}
+                {#each _user.dailys as :task}<app:tasks:task />{/}
             </ul>
             <br/>
             <app:tasks:ads>
@@ -73,7 +73,7 @@
 
             <!-- list of all the todos -->
             <ul class='todos task-list'>
-                {#each _todoList as :task}<app:tasks:task />{/}
+                {#each _user.todos as :task}<app:tasks:task />{/}
             </ul>
             <br/>
             <app:tasks:ads>
