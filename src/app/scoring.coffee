@@ -70,7 +70,7 @@ randomDrop = (model, delta, priority, streak=0) ->
       drop.dialog = "You've found a #{drop.text} Hatching Potion! #{drop.notes}"
 
     model.set '_drop', drop
-    $('#item-dropped-modal').modal 'show'
+    #$('#item-dropped-modal').modal 'show'
 
     user.set 'items.lastDrop.date', +new Date
     user.incr 'items.lastDrop.count'
