@@ -184,6 +184,7 @@ router.post '/user/tasks', auth, (req, res) ->
 ###
   POST /user/task/
 ###
+
 router.post '/user/task', auth, validateTask, (req, res) ->
   task = req.task
   type = task.type
@@ -198,6 +199,7 @@ router.post '/user/task', auth, validateTask, (req, res) ->
 ###
   GET /user/tasks
 ###
+
 router.get '/user/tasks', auth, (req, res) ->
   user = req.userObj
   return res.json 400, NO_USER_FOUND if !user || _.isEmpty(user)
@@ -269,3 +271,147 @@ router.post '/user/tasks/:taskId/:direction', auth, scoreTask
 module.exports = router
 module.exports.auth = auth
 module.exports.scoreTask = scoreTask # export so deprecated can call it
+
+###
+  New api starts here ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+###
+
+# Constructing callback fn :
+makeCallback = (req, res, next) ->
+  model = req.getModel()
+  user = req.user
+  model.ref('_user', user)
+  callback = (success, error) ->
+    userObj = model.at('_user').get()
+    userObj.tasks = _.toArray(userObj.tasks)
+    if success
+      res.json 201, userObj
+    else
+      res.json 500, { state: userObj, message: error }
+
+  req.callback = callback
+  next()
+
+###
+  POST /tasks/
+###
+router.post '/tasks', auth, makeCallback, (req,res) ->
+  model = req.getModel()
+  {user, userObj, callback} = req
+  task = req.body
+  createTask model, task, callback
+
+###
+  DELETE /tasks/:taskId
+###
+router.delete '/tasks/:taskId', auth, makeCallback, (req,res,params) ->
+  model = req.getModel()
+  {user, userObj, callback} = req
+  taskId = req.params.taskId
+  deleteTask user, model, taskId, callback
+
+###
+  PUT /tasks/:taskId/score
+###
+router.put '/tasks/:taskId/score', auth, makeCallback, (req,res) ->
+  model = req.getModel()
+  {user, userObj, callback} = req
+  options = req.body
+  updateTaskScore model, options.task, options.dir, callback
+
+###
+  PUT /tasks/:taskId/
+###
+router.put '/tasks/:taskId', auth, makeCallback, (req,res) ->
+  model = req.getModel()
+  {user, userObj, callback} = req
+  task = req.body
+  updateTask model, task, callback
+
+createTask = (model, task, callback) ->
+  newTask = { type, text, notes, value, up, down, completed } = task
+  
+  newTask.value = sanitize(value).toInt()
+  newTask.value = 0 if isNaN newTask.value
+  unless /^(habit|todo|daily|reward)$/.test type
+    return callback(false, "Task type is invalid")
+
+  newTask.text = sanitize(text).xss() if typeof text is "string"
+  newTask.notes = sanitize(notes).xss() if typeof notes is "string"
+
+  switch type
+    when 'habit'
+      newTask.up = true unless typeof up is 'boolean'
+      newTask.down = true unless typeof down is 'boolean'
+    when 'daily', 'todo'
+      newTask.completed = false unless typeof completed is 'boolean'
+
+  model.refList "_#{type}List", "_user.tasks", "_user.#{type}Ids"
+  model.push "_#{type}List", newTask, (err, path, tsk) ->
+    if err
+      callback(false, "Task creation failed")
+    else
+      callback(true)
+
+deleteTask = (user, model, taskID, callback) ->
+  task = user.get("tasks.#{taskID}")
+  return callback(false, "Task was not found") if !task || _.isEmpty(task)
+
+  type = task.type
+  model.refList "_#{type}List", "_user.tasks", "_user.#{type}Ids"
+
+  # Remove from tasks
+  user.del "tasks.#{task.id}", (err, path) ->
+    if(err)
+      callback(false,"Couldn't delete task")
+    else
+      # Remove one id from array of typeIds
+      i = model.get("_#{task.type}List").indexOf(task.id)
+      model.remove "_#{task.type}List", i, 1, ()->
+        callback(true)
+
+updateTaskScore = (model, taskID, direction, callback) ->
+  return callback(false,"Task id not provided") unless taskID
+  return callback(false,"Direction must be either 'up' or 'down'") unless direction in ['up','down']
+
+  existingTask = model.at "_user.tasks.#{taskID}"
+  # TODO add service & icon to task
+  # If task exists, set its completion
+  if existingTask.get()
+    # Set completed if type is daily or todo
+    if /^(daily|todo)$/.test existingTask.get('type')
+      existingTask.set 'completed', (direction is 'up'), ->
+        callback(true)
+    else
+      callback(true)
+    scoring.score(model, taskID, direction)
+  else
+    return callback(false,"Task was not found")
+
+updateTask = (model, task, callback) ->
+  taskID = task?.id
+  return callback(false,"Task id not provided") unless taskID
+
+  existingTask = model.at "_user.tasks.#{taskID}"
+  # TODO add service & icon to task
+  # If task exists, set its completion
+  if taskObj = existingTask.get()
+    _.extend(taskObj, task)
+    console.log(task)
+    model.set "_user.tasks.#{taskID}", taskObj, -> 
+      callback(true)
+  else
+    return callback(false,"Task was not found")
+
+# All routes :
+
+# router.get '/status', (req, res) ->
+# router.get '/user', auth, (req, res) ->
+# router.put '/user', auth, (req, res) ->
+# router.get '/user/task/:id', auth, (req, res) ->
+# router.put '/user/task/:id', auth, validateTask, (req, res) ->
+# router.delete '/user/task/:id', auth, validateTask, (req, res) ->
+# router.post '/user/tasks', auth, (req, res) ->
+# router.post '/user/task', auth, validateTask, (req, res) ->
+# router.get '/user/tasks', auth, (req, res) ->
+# router.post '/tasks', auth, (req,res) ->
