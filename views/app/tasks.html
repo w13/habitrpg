@@ -130,24 +130,25 @@
         <!-- left-hand side checkbox -->
         <div class="task-controls task-primary">
             <!-- Habits -->
-            {#if equal(:task.type, 'habit')}
-            {#if :task.up}<a class="task-action-btn" data-direction=up x-bind=click:score>＋</a>{/}
-            {#if :task.down}<a class="task-action-btn" data-direction=down x-bind=click:score>−</a>{/}
+            {{#if equal(:task.type, 'habit')}}
+
+                {#if :task.up}<a class="task-action-btn" data-direction=up x-bind=click:score>＋</a>{/}
+                {#if :task.down}<a class="task-action-btn" data-direction=down x-bind=click:score>−</a>{/}
 
             <!-- Rewards -->
-            {else if equal(:task.type, 'reward')}
-            <a class="money btn-buy" x-bind=click:score data-direction=down>
-                <span class="reward-cost">{:task.value}</span>
-                <span class='shop_gold'></span>
-            </a>
+            {{else if equal(:task.type, 'reward')}}
+                <a class="money btn-buy" x-bind=click:score data-direction=down>
+                    <span class="reward-cost">{:task.value}</span>
+                    <span class='shop_gold'></span>
+                </a>
 
             <!-- Daily & Todos -->
-            {else}
-            <span class="task-checker action-yesno">
-                <input type=checkbox id="box-{{:task.id}}" class="visuallyhidden focusable" checked="{:task.completed}">
-                <label for="box-{{:task.id}}"></label>
-            </span>
-            {/}
+            {{else}}
+                <span class="task-checker action-yesno">
+                    <input type=checkbox id="box-{{:task.id}}" class="visuallyhidden focusable" checked="{:task.completed}">
+                    <label for="box-{{:task.id}}"></label>
+                </span>
+            {{/}}
         </div>
 
         <!-- main content -->
@@ -162,80 +163,100 @@
 <!-- task edit/options -->
 <taskMeta:>
     <div id="{{:task.id}}-edit" class="task-options visuallyhidden">
-        <form x-bind=submit:toggleTaskEdit data-toggle-id="{{:task.id}}-edit">
-            <!-- text & notes -->
+        <!-- text & notes -->
+        <fieldset class="option-group">
+            <label class="option-title">Text</label><input class="option-content" type=text value={:task.text}>
+            <label class="option-title">Extra Notes</label><textarea class="option-content" rows=3>{:task.notes}</textarea>
+        </fieldset>
+
+        <!-- if Habit, plus/minus command options -->
+        {{#if equal(:task.type, 'habit')}}
             <fieldset class="option-group">
-                <label class="option-title">Text</label><input class="option-content" type=text value={:task.text}>
-                <label class="option-title">Extra Notes</label><textarea class="option-content" rows=3>{:task.notes}</textarea>
+                <legend class="option-title">Direction/Actions</legend>
+                <span class="task-checker action-plusminus select-toggle">
+                    <input class="visuallyhidden focusable" type=checkbox id="{{:task.id}}-option-plus" checked={:task.up}>
+                    <label for="{{:task.id}}-option-plus"></label>
+                </span>
+                <span class="task-checker action-plusminus select-toggle">
+                    <input class="visuallyhidden focusable" type=checkbox id="{{:task.id}}-option-minus" checked={:task.down}>
+                    <label for="{{:task.id}}-option-minus"></label>
+                </span>
             </fieldset>
 
-            <!-- if Habit, plus/minus command options -->
-            {#if equal(:task.type, 'habit')}
-                <fieldset class="option-group">
-                    <legend class="option-title">Direction/Actions</legend>
-                    <span class="task-checker action-plusminus select-toggle">
-                        <input class="visuallyhidden focusable" type=checkbox id="{{:task.id}}-option-plus" checked={:task.up}>
-                        <label for="{{:task.id}}-option-plus"></label>
-                    </span>
-                    <span class="task-checker action-plusminus select-toggle">
-                        <input class="visuallyhidden focusable" type=checkbox id="{{:task.id}}-option-minus" checked={:task.down}>
-                        <label for="{{:task.id}}-option-minus"></label>
-                    </span>
-                </fieldset>
+        <!-- if Daily, calendar -->
+        {{else if equal(:task.type, 'daily')}}
+            <fieldset class="option-group">
+                <legend class="option-title">Repeat</legend>
+                <div class="task-controls tile-group repeat-days">
+                    <!-- note, does not use  data-toggle="buttons-checkbox" - it would interfere with our own click binding -->
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.su}active{/}" data-day='su' x-bind=click:toggleDay>Su</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.m}active{/}" data-day='m' x-bind=click:toggleDay>M</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.t}active{/}" data-day='t' x-bind=click:toggleDay>T</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.w}active{/}" data-day='w' x-bind=click:toggleDay>W</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.th}active{/}" data-day='th' x-bind=click:toggleDay>Th</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.f}active{/}" data-day='f' x-bind=click:toggleDay>F</button>
+                    <button type="button" class="task-action-btn tile {#if :task.repeat.s}active{/}" data-day='s' x-bind=click:toggleDay>S</button>
+                </div>
+            </fieldset>
 
-            <!-- if Daily, calendar -->
-            {else if equal(:task.type, 'daily')}
-                <fieldset class="option-group">
-                    <legend class="option-title">Repeat</legend>
-                    <div class="task-controls tile-group repeat-days">
-                        <!-- note, does not use  data-toggle="buttons-checkbox" - it would interfere with our own click binding -->
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.su}active{/}" data-day='su' x-bind=click:toggleDay>Su</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.m}active{/}" data-day='m' x-bind=click:toggleDay>M</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.t}active{/}" data-day='t' x-bind=click:toggleDay>T</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.w}active{/}" data-day='w' x-bind=click:toggleDay>W</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.th}active{/}" data-day='th' x-bind=click:toggleDay>Th</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.f}active{/}" data-day='f' x-bind=click:toggleDay>F</button>
-                        <button type="button" class="task-action-btn tile {#if :task.repeat.s}active{/}" data-day='s' x-bind=click:toggleDay>S</button>
-                    </div>
-                </fieldset>
-
-            <!-- if Reward, pricing -->
-            {else if equal(:task.type, 'reward')}
-                <fieldset class="option-group option-short">
-                    <legend class="option-title">Price</legend>
-                    <input class="option-content" size="16" type="number" min="0" value={:task.value}>
-                    <div class="money input-suffix"><span class='shop_gold'></span></div>
-                </fieldset>
+        <!-- if Reward, pricing -->
+        {{else if equal(:task.type, 'reward')}}
+            <fieldset class="option-group option-short">
+                <legend class="option-title">Price</legend>
+                <input class="option-content" size="16" type="number" min="0" value={:task.value}>
+                <div class="money input-suffix"><span class='shop_gold'></span></div>
+            </fieldset>
 
 
-            <!-- if Todo, the due date -->
-            {else if equal(:task.type, 'todo')}
-                <fieldset class="option-group">
-                    <legend class="option-title">Due Date</legend>
-                    <input class="option-content datepicker" type="text" value="{:task.date}" data-date-format="mm/dd/yyyy">
-                </fieldset>
-            {/}
+        <!-- if Todo, the due date -->
+        {{else if equal(:task.type, 'todo')}}
+            <fieldset class="option-group">
+                <legend class="option-title">Due Date</legend>
+                <input class="option-content datepicker" type="text" value="{:task.date}" data-date-format="mm/dd/yyyy">
+            </fieldset>
+
+            <fieldset class="option-group">
+                <legend class="option-title">Checklist</legend>
+                <form x-bind="submit:tasksAddChecklist" data-task-id="{:task.id}">
+                    <input type="text" value="{_newChecklist}" placeholder="Add Checklist Item" />
+                </form>
+                {#if :task.checklist}
+                <ul class='unstyled task-checklists'>
+                {#each :task.checklist as :checklist}
+                    <li>
+                        <form class='form-inline' onsubmit="return false;">
+                            <fieldset>
+                                <input type='checkbox' checked="{:checklist.completed}" />
+                                <input type='text' value="{:checklist.text}" />
+                                <a x-bind="click:tasksRemoveChecklist"><i class='icon-remove'></i></a>
+                            </fieldset>
+                        </form>
+                    </li>
+                {/}
+                </ul>
+                {/}
+            </fieldset>
+        {{/}}
 
 
-            <app:filters:filter-fieldgroup />
+        <app:filters:filter-fieldgroup />
 
 
-            <!-- Advanced Options -->
-            {#unless equal(:task.type, 'reward')}
-                <p x-bind="click:tasksToggleAdvanced" class="option-title mega">Advanced Options</p>
-                <fieldset class="option-group advanced-option visuallyhidden">
-                    <legend class="option-title"><a class='priority-multiplier-help' href="https://trello.com/card/priority-multiplier/50e5d3684fe3a7266b0036d6/17" target="_blank"><i class='icon-question-sign'></i></a> Difficulty</legend>
-                    <div class="task-controls tile-group priority-multiplier" data-id="{{:task.id}}">
-                        <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!')}active{/}{#unless :task.priority}active{/}" data-priority='!' x-bind=click:tasksSetPriority>Easy</button>
-                        <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!!')}active{/}" data-priority='!!' x-bind=click:tasksSetPriority>Medium</button>
-                        <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!!!')}active{/}" data-priority='!!!' x-bind=click:tasksSetPriority>Hard</button>
-                    </div>
-                </fieldset>
-            {/}
+        <!-- Advanced Options -->
+        {#unless equal(:task.type, 'reward')}
+            <p x-bind="click:tasksToggleAdvanced" class="option-title mega">Advanced Options</p>
+            <fieldset class="option-group advanced-option visuallyhidden">
+                <legend class="option-title"><a class='priority-multiplier-help' href="https://trello.com/card/priority-multiplier/50e5d3684fe3a7266b0036d6/17" target="_blank"><i class='icon-question-sign'></i></a> Difficulty</legend>
+                <div class="task-controls tile-group priority-multiplier" data-id="{{:task.id}}">
+                    <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!')}active{/}{#unless :task.priority}active{/}" data-priority='!' x-bind=click:tasksSetPriority>Easy</button>
+                    <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!!')}active{/}" data-priority='!!' x-bind=click:tasksSetPriority>Medium</button>
+                    <button type="button" class="task-action-btn tile {#if equal(:task.priority,'!!!')}active{/}" data-priority='!!!' x-bind=click:tasksSetPriority>Hard</button>
+                </div>
+            </fieldset>
+        {/}
 
 
-            <button type=submit class="task-action-btn tile spacious" x-bind="click:tasksSaveAndClose">Save & Close</button>
-        </form>
+        <button type=button class="task-action-btn tile spacious" x-bind="click:tasksSaveAndClose">Save & Close</button>
     </div>
 
     <div style="display:none;" id={{:task.id}}-chart></div>

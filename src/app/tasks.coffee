@@ -184,6 +184,17 @@ module.exports.app = (appExports, model) ->
     $('[rel=popover]').popover()
 
   appExports.tasksSetPriority = (e, el) ->
-    dataId = $(el).parent('[data-id]').attr('data-id')
+    #dataId = $(el).parent('[data-id]').attr('data-id')
     #"_user.tasks.#{dataId}"
     model.at(e.target).set 'priority', $(el).attr('data-priority')
+
+  appExports.tasksAddChecklist = (e) ->
+    text = model.get('_newChecklist')
+    return if /^(\s)*$/.test(text) || text == undefined
+    task = user.at("tasks." + $(e.target).attr('data-task-id'))
+    task.unshift 'checklist', {text: text, completed: false, id: model.id()}
+    model.set '_newChecklist', ''
+
+  appExports.tasksRemoveChecklist = (e) ->
+    e.at().del()
+
