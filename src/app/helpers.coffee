@@ -1,5 +1,6 @@
 moment = require 'moment'
 _ = require 'underscore'
+relative = require 'relative-date'
 algos = require './algos'
 lodash = require 'lodash'
 
@@ -119,9 +120,14 @@ viewHelpers = (view) ->
   ###
     Tasks
   ###
-  view.fn 'taskClasses', (task, dayStart, lastCron) ->
+  view.fn 'taskClasses', (task, filters, dayStart, lastCron) ->
     return unless task
     {type, completed, value, repeat} = task
+
+    for filter, enabled of filters
+      if enabled and not task.tags?[filter]
+        # All the other classes don't matter
+        return 'hide'
 
     classes = type
 
@@ -165,5 +171,20 @@ viewHelpers = (view) ->
   view.fn 'newChatMessages', (messages, lastMessageSeen) ->
     return false unless messages?.length > 0
     messages && messages[0].id != lastMessageSeen
+
+  view.fn 'indexOf', (str1, str2) ->
+    return false unless str1 && str2
+    str1.indexOf(str2) != -1
+
+  view.fn 'relativeDate', relative
+
+  view.fn 'noTags', (tags) ->
+    _.isEmpty(tags) or _.isEmpty(_.filter( tags, (t) -> t ) )
+
+  view.fn 'appliedTags', (userTags, taskTags) ->
+    arr = []
+    _.each userTags, (t) ->
+      arr.push(t.name) if taskTags?[t.id]
+    arr.join(', ')
 
 module.exports = { viewHelpers, removeWhitespace, randomVal, daysBetween, dayMapping, username, indexById }

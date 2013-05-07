@@ -19,14 +19,13 @@ module.exports.app = (appExports, model) ->
       when 'habit'
         newTask = _.defaults {up: true, down: true}, newTask
       when 'reward'
-        newTask = _.defaults {value: 20 }, newTask
+        newTask = _.defaults {value: 20}, newTask
       when 'daily'
         newTask = _.defaults {repeat:{su:true,m:true,t:true,w:true,th:true,f:true,s:true}, completed: false }, newTask
       when 'todo'
         newTask = _.defaults {completed: false }, newTask
     model.unshift "_user.#{type}s", newTask
     newModel.set ''
-
 
   appExports.del = (e, el) ->
     # Derby extends model.at to support creation from DOM nodes
@@ -117,7 +116,6 @@ module.exports.app = (appExports, model) ->
     target.removeClass(oldContext)
     target.addClass(newContext)
 
-
   setUndo = (stats, task) ->
     previousUndo = model.get('_undo')
     clearTimeout(previousUndo.timeoutId) if previousUndo?.timeoutId
@@ -185,5 +183,5 @@ module.exports.app = (appExports, model) ->
     $('[rel=popover]').popover()
 
   appExports.tasksSetPriority = (e, el) ->
-    dataId = $(el).parent('[data-id]').attr('data-id')
+    #dataId = $(el).parent('[data-id]').attr('data-id')
     model.at(e.target).set 'priority', $(el).attr('data-priority')

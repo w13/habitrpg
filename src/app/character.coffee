@@ -87,6 +87,7 @@ userSchema =
   flags:
     partyEnabled: false
     itemsEnabled: false
+  tags: []
 # ads: 'show' # added on registration
 
 module.exports.newUserObject = ->
@@ -114,11 +115,21 @@ module.exports.newUserObject = ->
       {text: 'Cake', notes: 'But only buy if you have enough gold - you lose HP otherwise.', value: 10 }
     ]
 
+  defaultTags = [
+    {name: 'morning'}
+    {name: 'afternoon'}
+    {name: 'evening'}
+  ]
+
   _.each defaultTasks, (arr, type) ->
     _.each arr, (task) ->
       task.id = derby.uuid()
       task.type = type
       newUser["#{type}s"].push task
+
+  for tag in defaultTags
+    tag.id = derby.uuid()
+    newUser.tags.push tag
 
   return newUser
 
