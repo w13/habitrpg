@@ -326,28 +326,32 @@ router.put '/tasks/:taskId', auth, makeCallback, (req,res) ->
   model = req.getModel()
   {user, userObj, callback} = req
   task = req.body
+  #task = req.body
   updateTask model, task, callback
 
-createTask = (model, task, callback) ->
+# general validation and sanitization
+processTask = (task) ->
   newTask = { type, text, notes, value, up, down, completed } = task
-  
   newTask.value = sanitize(value).toInt()
   newTask.value = 0 if isNaN newTask.value
-  unless /^(habit|todo|daily|reward)$/.test type
-    return callback(false, "Task type is invalid")
-
   newTask.text = sanitize(text).xss() if typeof text is "string"
   newTask.notes = sanitize(notes).xss() if typeof notes is "string"
-
   switch type
     when 'habit'
       newTask.up = true unless typeof up is 'boolean'
       newTask.down = true unless typeof down is 'boolean'
     when 'daily', 'todo'
       newTask.completed = false unless typeof completed is 'boolean'
+  return newTask
 
-  model.refList "_#{type}List", "_user.tasks", "_user.#{type}Ids"
-  model.push "_#{type}List", newTask, (err, path, tsk) ->
+createTask = (model, task, callback) ->
+  unless /^(habit|todo|daily|reward)$/.test task.type
+    return callback(false, "Task type is invalid")
+
+  task = processTask(task)
+
+  model.refList "_#{task.type}List", "_user.tasks", "_user.#{task.type}Ids"
+  model.push "_#{task.type}List", task, (err, path, tsk) ->
     if err
       callback(false, "Task creation failed")
     else
@@ -378,13 +382,13 @@ updateTaskScore = (model, taskID, direction, callback) ->
   # TODO add service & icon to task
   # If task exists, set its completion
   if existingTask.get()
+    # scoring.score(model, taskID, direction)
     # Set completed if type is daily or todo
     if /^(daily|todo)$/.test existingTask.get('type')
       existingTask.set 'completed', (direction is 'up'), ->
         callback(true)
     else
       callback(true)
-    scoring.score(model, taskID, direction)
   else
     return callback(false,"Task was not found")
 
@@ -392,26 +396,17 @@ updateTask = (model, task, callback) ->
   taskID = task?.id
   return callback(false,"Task id not provided") unless taskID
 
+  unless /^(habit|todo|daily|reward)$/.test task.type
+    return callback(false, "Task type is invalid")
+
+  task = processTask(task)
+
   existingTask = model.at "_user.tasks.#{taskID}"
   # TODO add service & icon to task
   # If task exists, set its completion
   if taskObj = existingTask.get()
     _.extend(taskObj, task)
-    console.log(task)
     model.set "_user.tasks.#{taskID}", taskObj, -> 
       callback(true)
   else
     return callback(false,"Task was not found")
-
-# All routes :
-
-# router.get '/status', (req, res) ->
-# router.get '/user', auth, (req, res) ->
-# router.put '/user', auth, (req, res) ->
-# router.get '/user/task/:id', auth, (req, res) ->
-# router.put '/user/task/:id', auth, validateTask, (req, res) ->
-# router.delete '/user/task/:id', auth, validateTask, (req, res) ->
-# router.post '/user/tasks', auth, (req, res) ->
-# router.post '/user/task', auth, validateTask, (req, res) ->
-# router.get '/user/tasks', auth, (req, res) ->
-# router.post '/tasks', auth, (req,res) ->
