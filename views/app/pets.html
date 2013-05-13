@@ -27,19 +27,19 @@
 
 <pet:>
     <td class="{#if _user.items.pets[.name]}active-pet{/}">
-        <img rel=tooltip title="{.text} - {.value} Tokens" x-bind="click:selectPet" data-pet='{.name}' src='img/sprites/{.icon}'/>
+        <img rel=tooltip title="{.text} - {.value} Gems" x-bind="click:selectPet" data-pet='{.name}' src='img/sprites/{.icon}'/>
     </td>
 
 <hatchingPotion:>
     <td class="active-hatchingPotion" x-bind="click:buyHatchingPotion" data-hatchingPotion='{.name}'>
         <div class="Pet_HatchingPotion_{.name}"></div>
-        {.text}<br/><small>{.value} tokens<small>
+        {.text}<br/><small>{.value} Gems<small>
     </td>
 
 <egg:>
     <td class="active-egg" x-bind="click:buyEgg" data-egg='{.name}'>
         <div rel=tooltip class="Pet_Egg_{.name}"></div>
-        {.text}<br/><small>{.value} tokens<small>
+        {.text}<br/><small>{.value} Gems<small>
     </td>
 
 <inventory:>
@@ -111,6 +111,7 @@
     <table>
         <tr>
             <td><app:pets:stable-pet potion='Veteran Wolf' pet="Wolf-Veteran" /></td>
+            {{#if gt(_user.backer.tier,79)}}<td><app:pets:stable-pet potion='Cerberus Pup' pet="Wolf-Cerberus" /></td>{{/}}
         </tr>
     </table>
 
@@ -127,6 +128,6 @@
         {#if ownsPet(@pet, _user.items.pets)}
             <button class="pet-button Pet-{{@pet}} {#if equal(_user.items.currentPet.name, @string)}active{/if}" data-pet="{{@pet}}" x-bind="click:choosePet"></button>
         {else}
-            <button class="pet-button pet-not-owned" data-pet="{{@pet}}"><img src="/img/paw.png"/></button>
+            <button class="pet-button pet-not-owned" data-pet="{{@pet}}"><img src="/img/PixelPaw.png"/></button>
         {/}
     </div>

@@ -20,7 +20,7 @@ randomDrop = (model, delta, priority, streak=0) ->
     date: +moment().subtract('d',1) # trick - set it to yesterday on first run, that way they can get drops today
     count: 0
   reachedDropLimit = (helpers.daysBetween(user.get('items.lastDrop.date'), +new Date) is 0) and user.get('items.lastDrop.count') >= 2
-  return if reachedDropLimit and model.flags.nodeEnv != 'development'
+  return if reachedDropLimit
 
   # % chance of getting a pet or meat
   chanceMultiplier = Math.abs(delta)
@@ -207,13 +207,12 @@ updateStats = (model, newStats, batch) ->
   obj = batch.obj()
 
   # if user is dead, dont do anything
-  return if obj.stats.lvl == 0
+  return if obj.stats.hp <= 0
 
   if newStats.hp?
     # Game Over
     if newStats.hp <= 0
-      obj.stats.lvl = 0 # signifies dead
-      obj.stats.hp = 0
+      obj.stats.hp = 0  # signifies dead
       return
     else
       obj.stats.hp = newStats.hp
@@ -276,16 +275,16 @@ cron = (model) ->
   today = +new Date
   daysPassed = helpers.daysBetween(user.get('lastCron'), today, user.get('preferences.dayStart'))
   if daysPassed > 0
+
+    # User is resting at the inn. Used to be we un-checked each daily without performing calculation (see commits before fb29e35)
+    # but to prevent abusing the inn (http://goo.gl/GDb9x) we now do *not* calculate dailies, and simply set lastCron to today
+    if user.get('flags.rest') is true
+      return user.set('lastCron', today)
+
     batch = new character.BatchUpdate(model)
     batch.startTransaction()
     obj = batch.obj()
     batch.set 'lastCron', today
-
-    if user.get('flags.rest') is true
-      _.each model.get('_dailyList'), (daily) -> batch.set("tasks.#{daily.id}.completed", false)
-      browser.resetDom(model)
-      batch.commit()
-      return
 
     hpBefore = obj.stats.hp #we'll use this later so we can animate hp loss
     # Tally each task
